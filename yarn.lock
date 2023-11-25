@@ -2230,6 +2230,11 @@ find-up@^5.0.0:
     locate-path "^6.0.0"
     path-exists "^4.0.0"
 
+flow-bin@^0.222.0:
+  version "0.222.0"
+  resolved "https://registry.npmjs.org/flow-bin/-/flow-bin-0.222.0.tgz#b4ca588c77fbd79db1edf38615cd04d114c1e933"
+  integrity sha512-U2047+pOX1EutHGykcjtamAlP8UIHrxbkexB5zPVQ8PH+WcVmD4PtRE6J8Jc3S6odyo0AqVnQsI4rE/2x2fGmQ==
+
 flow-enums-runtime@^0.0.5:
   version "0.0.5"
   resolved "https://registry.npmjs.org/flow-enums-runtime/-/flow-enums-runtime-0.0.5.tgz#95884bfcc82edaf27eef7e1dd09732331cfbafbc"
@@ -3772,6 +3777,11 @@ pkg-dir@^4.2.0:
   integrity sha512-HRDzbaKjC+AOWVXxAU/x54COGeIv9eb+6CkDSQoNTt4XyWoIJvuPsXizxu/Fr23EiekbtZwmh1IcIG/l/a10GQ==
   dependencies:
     find-up "^4.0.0"
+
+prettier@^3.1.0:
+  version "3.1.0"
+  resolved "https://registry.npmjs.org/prettier/-/prettier-3.1.0.tgz#c6d16474a5f764ea1a4a373c593b779697744d5e"
+  integrity sha512-TQLvXjq5IAibjh8EpBIkNKxO749UEWABoiIZehEPiY4GNpVdhaFKqSTu+QrlU6D2dPAfubRmtJTi4K4YkQ5eXw==
 
 pretty-format@^26.5.2, pretty-format@^26.6.2:
   version "26.6.2"
