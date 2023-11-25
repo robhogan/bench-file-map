@@ -2,11 +2,15 @@
 
 const MetroFileMap = require("metro-file-map").default;
 const nullthrows = require("nullthrows");
+const fs = require("fs");
 
 let startApplyFileDelta;
 let applyFileDeltaDuration;
 let startInitWorkers;
 let initWorkersDuration;
+
+const concurrency = parseInt(process.env.CONCURRENCY, 10);
+const threads = process.env.THREADS === "1";
 
 const fileMap = new MetroFileMap({
   rootDir: __dirname,
@@ -20,7 +24,7 @@ const fileMap = new MetroFileMap({
   watch: true,
   useWatchman: false,
   forceNodeFilesystemAPI: true,
-  enableWorkerThreads: true,
+  enableWorkerThreads: threads,
   perfLoggerFactory: (name) => {
     if (name !== "START_UP") {
       throw new Error("Unexpected request for non-startup logger");
@@ -74,17 +78,25 @@ const fileMap = new MetroFileMap({
 });
 
 async function main() {
+  const outfile = nullthrows(process.env.OUTFILE);
   const startBuild = performance.now();
   const { fileSystem } = await fileMap.build();
   const buildTime = performance.now() - startBuild;
   await fileMap.end();
   const numFiles = fileSystem.getAllFiles().length;
-  console.log({
-    buildTime,
-    numFiles,
-    applyFileDeltaDuration,
-    initWorkersDuration,
-  });
+  fs.appendFileSync(
+    outfile,
+    JSON.stringify({
+      async: process.env.ASYNC === "1",
+      pqueue: process.env.PQUEUE === "1",
+      threads: process.env.PQUEUE !== "1" && process.env.THREADS === "1",
+      concurrency,
+      buildTime,
+      numFiles,
+      applyFileDeltaDuration,
+      initWorkersDuration,
+    }) + ",\n",
+  );
 }
 
 main();
