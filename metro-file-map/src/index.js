@@ -26,12 +26,12 @@ var _DiskCacheManager = require("./cache/DiskCacheManager");
 var _constants = _interopRequireDefault(require("./constants"));
 var _getMockName = _interopRequireDefault(require("./getMockName"));
 var _checkWatchmanCapabilities = _interopRequireDefault(
-  require("./lib/checkWatchmanCapabilities")
+  require("./lib/checkWatchmanCapabilities"),
 );
 var _DuplicateError = require("./lib/DuplicateError");
 var fastPath = _interopRequireWildcard(require("./lib/fast_path"));
 var _normalizePathSeparatorsToSystem = _interopRequireDefault(
-  require("./lib/normalizePathSeparatorsToSystem")
+  require("./lib/normalizePathSeparatorsToSystem"),
 );
 var _TreeFS = _interopRequireDefault(require("./lib/TreeFS"));
 var _MutableHasteMap = _interopRequireDefault(require("./lib/MutableHasteMap"));
@@ -46,6 +46,8 @@ var _perf_hooks = require("perf_hooks");
 var _nullthrows = _interopRequireDefault(require("nullthrows"));
 var _MockMap = _interopRequireDefault(require("./lib/MockMap"));
 var _DuplicateHasteCandidatesError = require("./lib/DuplicateHasteCandidatesError");
+var PQueue = require("p-queue").default;
+
 function _getRequireWildcardCache(nodeInterop) {
   if (typeof WeakMap !== "function") return null;
   var cacheBabelInterop = new WeakMap();
@@ -216,11 +218,11 @@ class FileMap extends _events.default {
       if (inputIgnorePattern instanceof RegExp) {
         ignorePattern = new RegExp(
           inputIgnorePattern.source.concat("|" + VCS_DIRECTORIES),
-          inputIgnorePattern.flags
+          inputIgnorePattern.flags,
         );
       } else {
         throw new Error(
-          "metro-file-map: the `ignorePattern` option must be a RegExp"
+          "metro-file-map: the `ignorePattern` option must be a RegExp",
         );
       }
     } else {
@@ -324,12 +326,12 @@ class FileMap extends _events.default {
           hasteMap,
           mocks,
           fileDelta.changedFiles,
-          fileDelta.removedFiles
+          fileDelta.removedFiles,
         );
         debug(
           "Finished mapping files (%d changes, %d removed).",
           fileDelta.changedFiles.size,
-          fileDelta.removedFiles.size
+          fileDelta.removedFiles.size,
         );
         await this._watch(fileSystem, hasteMap, mocks);
         return {
@@ -397,7 +399,7 @@ class FileMap extends _events.default {
     } catch (e) {
       this._console.warn(
         "Error while reading cache, falling back to a full crawl:\n",
-        e
+        e,
       );
       this._startupPerfLogger?.annotate({
         string: {
@@ -566,12 +568,12 @@ class FileMap extends _events.default {
               "    * <rootDir>" + path.sep + existingMockPath,
               "    * <rootDir>" + path.sep + secondMockPath,
               "",
-            ].join("\n")
+            ].join("\n"),
           );
           if (this._options.throwOnModuleCollision) {
             throw new _DuplicateError.DuplicateError(
               existingMockPath,
-              secondMockPath
+              secondMockPath,
             );
           }
         }
@@ -621,7 +623,7 @@ class FileMap extends _events.default {
       // SHA-1, if requested, should already be present thanks to the crawler.
       const filePath = fastPath.resolve(
         this._options.rootDir,
-        relativeFilePath
+        relativeFilePath,
       );
       const maybePromise = this._processFile(
         hasteMap,
@@ -630,7 +632,7 @@ class FileMap extends _events.default {
         fileData,
         {
           perfLogger: this._startupPerfLogger,
-        }
+        },
       );
       if (maybePromise) {
         promises.push(
@@ -640,7 +642,7 @@ class FileMap extends _events.default {
             } else {
               throw e;
             }
-          })
+          }),
         );
       }
     }
@@ -689,7 +691,7 @@ class FileMap extends _events.default {
     hasteMap,
     mockMap,
     changed,
-    removed
+    removed,
   ) {
     this._startupPerfLogger?.point("persist_start");
     await this._cacheManager.write(
@@ -701,7 +703,7 @@ class FileMap extends _events.default {
       {
         changed,
         removed,
-      }
+      },
     );
     this._startupPerfLogger?.point("persist_end");
   }
@@ -712,7 +714,12 @@ class FileMap extends _events.default {
   _getWorker(options) {
     if (!this._worker) {
       const { forceInBand, perfLogger } = options ?? {};
-      if (forceInBand === true || this._options.maxWorkers <= 1) {
+      if (process.env.PQUEUE === "1") {
+        const pQueue = new PQueue({ concurrency: this._options.maxWorkers });
+        this._worker = {
+          worker: (args) => pQueue.add(() => _worker.worker(args)),
+        };
+      } else if (forceInBand === true || this._options.maxWorkers <= 1) {
         this._worker = {
           worker: _worker.worker,
         };
@@ -749,7 +756,7 @@ class FileMap extends _events.default {
     if (this._options.mocksPattern) {
       const absoluteFilePath = path.join(
         this._options.rootDir,
-        (0, _normalizePathSeparatorsToSystem.default)(relativeFilePath)
+        (0, _normalizePathSeparatorsToSystem.default)(relativeFilePath),
       );
       if (
         this._options.mocksPattern &&
@@ -826,7 +833,7 @@ class FileMap extends _events.default {
       }
       const absoluteFilePath = path.join(
         root,
-        (0, _normalizePathSeparatorsToSystem.default)(filePath)
+        (0, _normalizePathSeparatorsToSystem.default)(filePath),
       );
 
       // Ignore files (including symlinks) whose path matches ignorePattern
@@ -865,7 +872,7 @@ class FileMap extends _events.default {
                     metadata &&
                     event.metadata.modifiedTime != null &&
                     metadata.modifiedTime != null &&
-                    event.metadata.modifiedTime === metadata.modifiedTime))
+                    event.metadata.modifiedTime === metadata.modifiedTime)),
             )
           ) {
             return null;
@@ -897,7 +904,7 @@ class FileMap extends _events.default {
               fileSystem,
               hasteMap,
               mockMap,
-              relativeFilePath
+              relativeFilePath,
             );
           }
 
@@ -906,7 +913,7 @@ class FileMap extends _events.default {
           if (type === "add" || type === "change") {
             (0, _invariant.default)(
               metadata != null && metadata.size != null,
-              "since the file exists or changed, it should have metadata"
+              "since the file exists or changed, it should have metadata",
             );
             const fileMetadata = [
               "",
@@ -925,7 +932,7 @@ class FileMap extends _events.default {
                 fileMetadata,
                 {
                   forceInBand: true,
-                } // No need to clean up workers
+                }, // No need to clean up workers
               );
 
               fileSystem.addOrModify(relativeFilePath, fileMetadata);
@@ -954,21 +961,21 @@ class FileMap extends _events.default {
             });
           } else {
             throw new Error(
-              `metro-file-map: Unrecognized event type from watcher: ${type}`
+              `metro-file-map: Unrecognized event type from watcher: ${type}`,
             );
           }
           return null;
         })
         .catch((error) => {
           this._console.error(
-            `metro-file-map: watch error:\n  ${error.stack}\n`
+            `metro-file-map: watch error:\n  ${error.stack}\n`,
           );
         });
     };
     this._changeInterval = setInterval(emitChange, CHANGE_INTERVAL);
     (0, _invariant.default)(
       this._watcher != null,
-      "Expected _watcher to have been initialised by build()"
+      "Expected _watcher to have been initialised by build()",
     );
     await this._watcher.watch(onChange);
     if (this._options.healthCheck.enabled) {
@@ -986,7 +993,7 @@ class FileMap extends _events.default {
       performHealthCheck();
       this._healthCheckInterval = setInterval(
         performHealthCheck,
-        this._options.healthCheck.interval
+        this._options.healthCheck.interval,
       );
     }
     this._startupPerfLogger?.point("watch_end");
@@ -1021,7 +1028,7 @@ class FileMap extends _events.default {
     }
     if (!this._canUseWatchmanPromise) {
       this._canUseWatchmanPromise = (0, _checkWatchmanCapabilities.default)(
-        WATCHMAN_REQUIRED_CAPABILITIES
+        WATCHMAN_REQUIRED_CAPABILITIES,
       )
         .then(() => true)
         .catch((e) => {

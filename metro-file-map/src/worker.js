@@ -21,11 +21,12 @@ const { createHash } = require("crypto");
 const fs = require("graceful-fs");
 const { promises: fsPromises } = require("fs");
 const path = require("path");
+const ASYNC = process.env.ASYNC === "1";
 const PACKAGE_JSON = path.sep + "package.json";
 let hasteImpl /*: ?{getHasteName: string => ?string} */ = null;
 let hasteImplModulePath /*: ?string */ = null;
 function getHasteImpl(
-  requestedModulePath /*: string */
+  requestedModulePath /*: string */,
 ) /*: {getHasteName: string => ?string} */ {
   if (hasteImpl) {
     if (requestedModulePath !== hasteImplModulePath) {
@@ -42,7 +43,7 @@ function sha1hex(content /*: string | Buffer */) /*: string */ {
   return createHash("sha1").update(content).digest("hex");
 }
 async function worker(
-  data /*: WorkerMessage */
+  data /*: WorkerMessage */,
 ) /*: Promise<WorkerMetadata> */ {
   let content /*: ?Buffer */;
   let dependencies /*: WorkerMetadata['dependencies'] */;
@@ -60,17 +61,19 @@ async function worker(
     filePath,
   } = data;
   const getContent = () =>
-    /*: Buffer */
+    /*: Buffer|Promise<Buffer> */
     {
       if (content == null) {
-        content = fs.readFileSync(filePath);
+        content = ASYNC
+          ? fs.promises.readFile(filePath)
+          : fs.readFileSync(filePath);
       }
       return content;
     };
   if (enableHastePackages && filePath.endsWith(PACKAGE_JSON)) {
     // Process a package.json that is returned as a PACKAGE type with its name.
     try {
-      const fileData = JSON.parse(getContent().toString());
+      const fileData = JSON.parse(await getContent().toString());
       if (fileData.name) {
         const relativeFilePath = path.relative(rootDir, filePath);
         id = fileData.name;
@@ -96,18 +99,18 @@ async function worker(
         data.dependencyExtractor != null
           ? // $FlowFixMe[unsupported-syntax] - dynamic require
             require(data.dependencyExtractor).extract(
-              getContent().toString(),
+              await getContent().toString(),
               filePath,
-              dependencyExtractor.extract
+              dependencyExtractor.extract,
             )
-          : dependencyExtractor.extract(getContent().toString())
+          : dependencyExtractor.extract(await getContent().toString()),
       );
     }
   }
 
   // If a SHA-1 is requested on update, compute it.
   if (computeSha1) {
-    sha1 = sha1hex(getContent());
+    sha1 = sha1hex(await getContent());
   }
   if (readLink) {
     symlinkTarget = await fsPromises.readlink(filePath);
